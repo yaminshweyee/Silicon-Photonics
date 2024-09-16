@@ -1,4 +1,5 @@
-# Define waveguide parameters
+# Define simulation parameters from Table I
+# Waveguide dimensions
 wg_width = 500e-9;       # Width of the waveguide in meters (500 nm)
 wg_thickness = 220e-9;   # Thickness of the waveguide in meters (220 nm)
 wg_slab_thickness = 0;   # Slab thickness of the waveguide (0 nm)
@@ -9,98 +10,62 @@ wvl_stop = 1600e-9;   # Ending wavelength in meters (1600 nm)
 num_points = 100;     # Number of points for the wavelength sweep
 wavelengths = linspace(wvl_start, wvl_stop, num_points);  # Wavelength array
 
-# Initialize arrays to store results
-n_eff_array_EIM = zeros(num_points);  # Effective index array for EIM
-n_g_array_EIM = zeros(num_points);    # Group index array for EIM
-n_eff_array_MODE = zeros(num_points); # Effective index array for MODE
-n_g_array_MODE = zeros(num_points);   # Group index array for MODE
+# Initialize arrays for storing results
+n_eff_array_EIM = zeros(num_points);  # Effective index for EIM
+n_g_array_EIM = zeros(num_points);    # Group index for EIM
+n_eff_array_MODE = zeros(num_points); # Effective index for MODE
+n_g_array_MODE = zeros(num_points);   # Group index for MODE
 
-# Define and run the simulations for EIM
-for (i = 1:num_points) {
-    wavelength = wavelengths(i);
-    
-    # Set up waveguide geometry
+# Define a function to set up the waveguide and substrate
+function setup_waveguide(material)
+    # Create waveguide geometry
     addrect;
-    set("name", "waveguide_EIM");
-    set("x span", wg_width);     # Set waveguide width to 500 nm
-    set("y span", wg_thickness); # Set waveguide thickness to 220 nm
-    set("z span", 2e-6);         # Set waveguide length for simulation
-    set("material", "Si (Silicon)");  # Set waveguide material to dispersive Si
+    set("name", "waveguide");
+    set("x span", wg_width);     # Width of the waveguide
+    set("y span", wg_thickness); # Thickness of the waveguide
+    set("z span", 2e-6);         # Length of waveguide
+    set("material", material);   # Set waveguide material
     
-    # Define substrate (SiO2)
+    # Define substrate
     addrect;
-    set("name", "substrate_EIM");
-    set("x span", wg_width + 2e-6);    # Substrate wider than waveguide
-    set("y", -wg_thickness/2 - 2e-6);  # Place below waveguide
-    set("y span", 2e-6);               # Thick enough for simulation
-    set("material", "SiO2 (Silicon Dioxide)");  # Set substrate material to dispersive SiO2
-    
-    # Set up Mode Solver Simulation for TE polarization
-    addmode;
-    set("wavelength start", wvl_start);
-    set("wavelength stop", wvl_stop);
-    set("number of points", num_points);
-    set("solver type", "EIM");  # Eigenmode (EIM) solver
-    set("x", 0);
-    set("y", 0);
-    set("z", 0);
-    set("polarization", "TE");  # TE mode
+    set("name", "substrate");
+    set("x span", wg_width + 2e-6);    # Wider substrate
+    set("y", -wg_thickness/2 - 2e-6);  # Position below waveguide
+    set("y span", 2e-6);               # Thickness of substrate
+    set("material", "SiO2 (Silicon Dioxide)");  # Substrate material
+endfunction
 
-    # Compute modes for EIM
-    set("wavelength", wavelength);
-    run("compute modes");
+# Function to perform simulations
+function run_simulation(solver_type, n_eff_array, n_g_array, wavelengths)
+    for (i = 1:num_points) {
+        wavelength = wavelengths(i);
+        
+        # Set wavelength
+        set("wavelength", wavelength);
+        run("compute modes");
+        
+        # Extract effective index and group index
+        n_eff = getresult("mode solver", "neff");  # Effective index
+        n_g = getresult("mode solver", "ng");      # Group index
+        n_eff_array(i) = n_eff(1);  # Store effective index
+        n_g_array(i) = n_g(1);      # Store group index
+    endfor
+endfunction
 
-    # Extract the effective index and group index for the fundamental TE mode using EIM
-    n_eff_EIM = getresult("mode solver", "neff");  # Effective index
-    n_g_EIM = getresult("mode solver", "ng");      # Group index
-    n_eff_array_EIM(i) = n_eff_EIM(1);  # Store fundamental mode effective index
-    n_g_array_EIM(i) = n_g_EIM(1);      # Store fundamental mode group index
-endfor
+# Set up and run EIM simulations
+set("solver type", "EIM");  # Set solver type to Eigenmode
+setup_waveguide("Si (Silicon)");  # Set material to Silicon
+run_simulation("EIM", n_eff_array_EIM, n_g_array_EIM, wavelengths);
 
-# Define and run the simulations for MODE
-for (i = 1:num_points) {
-    wavelength = wavelengths(i);
-    
-    # Set up waveguide geometry
-    addrect;
-    set("name", "waveguide_MODE");
-    set("x span", wg_width);     # Set waveguide width to 500 nm
-    set("y span", wg_thickness); # Set waveguide thickness to 220 nm
-    set("z span", 2e-6);         # Set waveguide length for simulation
-    set("material", "Si (Silicon)");  # Set waveguide material to dispersive Si
-    
-    # Define substrate (SiO2)
-    addrect;
-    set("name", "substrate_MODE");
-    set("x span", wg_width + 2e-6);    # Substrate wider than waveguide
-    set("y", -wg_thickness/2 - 2e-6);  # Place below waveguide
-    set("y span", 2e-6);               # Thick enough for simulation
-    set("material", "SiO2 (Silicon Dioxide)");  # Set substrate material to dispersive SiO2
-    
-    # Set up Mode Solver Simulation for TE polarization
-    addmode;
-    set("wavelength start", wvl_start);
-    set("wavelength stop", wvl_stop);
-    set("number of points", num_points);
-    set("solver type", "FDE");  # Finite-Difference Eigenmode (FDE) solver
-    set("x", 0);
-    set("y", 0);
-    set("z", 0);
-    set("polarization", "TE");  # TE mode
+# Set up and run MODE simulations
+set("solver type", "FDE");  # Set solver type to Finite-Difference Eigenmode
+setup_waveguide("Si (Silicon)");  # Set material to Silicon
+run_simulation("FDE", n_eff_array_MODE, n_g_array_MODE, wavelengths);
 
-    # Compute modes for MODE
-    set("wavelength", wavelength);
-    run("compute modes");
-
-    # Extract the effective index and group index for the fundamental TE mode using MODE
-    n_eff_MODE = getresult("mode solver", "neff");  # Effective index
-    n_g_MODE = getresult("mode solver", "ng");      # Group index
-    n_eff_array_MODE(i) = n_eff_MODE(1);  # Store fundamental mode effective index
-    n_g_array_MODE(i) = n_g_MODE(1);      # Store fundamental mode group index
-endfor
-
-# Calculate Dispersion for EIM and MODE
+# Calculate Dispersion
 c = 3e8;  # Speed of light in m/s
+
+# Calculate second derivatives for dispersion
 d2n_eff_dlambda2_EIM = gradient(gradient(n_eff_array_EIM, wavelengths), wavelengths);
 dispersion_array_EIM = -(wavelengths / c) .* d2n_eff_dlambda2_EIM;
 
@@ -108,18 +73,28 @@ d2n_eff_dlambda2_MODE = gradient(gradient(n_eff_array_MODE, wavelengths), wavele
 dispersion_array_MODE = -(wavelengths / c) .* d2n_eff_dlambda2_MODE;
 
 # Plot Effective Index vs Wavelength
-plot(wavelengths * 1e9, n_eff_array_EIM, "Wavelength (nm)", "Effective Index (n_{eff})", "Effective Index vs Wavelength (EIM)");
-legend("Effective Index (EIM)");
-
-plot(wavelengths * 1e9, n_eff_array_MODE, "Wavelength (nm)", "Effective Index (n_{eff})", "Effective Index vs Wavelength (MODE)");
-legend("Effective Index (MODE)");
+figure;
+plot(wavelengths * 1e9, n_eff_array_EIM, 'r-', 'LineWidth', 1.5);
+hold on;
+plot(wavelengths * 1e9, n_eff_array_MODE, 'b--', 'LineWidth', 1.5);
+xlabel('Wavelength (nm)');
+ylabel('Effective Index (n_{eff})');
+title('Effective Index vs Wavelength');
+legend('EIM', 'MODE');
+grid on;
+hold off;
 
 # Plot Group Index vs Wavelength
-plot(wavelengths * 1e9, n_g_array_EIM, "Wavelength (nm)", "Group Index (n_g)", "Group Index vs Wavelength (EIM)");
-legend("Group Index (EIM)");
-
-plot(wavelengths * 1e9, n_g_array_MODE, "Wavelength (nm)", "Group Index (n_g)", "Group Index vs Wavelength (MODE)");
-legend("Group Index (MODE)");
+figure;
+plot(wavelengths * 1e9, n_g_array_EIM, 'r-', 'LineWidth', 1.5);
+hold on;
+plot(wavelengths * 1e9, n_g_array_MODE, 'b--', 'LineWidth', 1.5);
+xlabel('Wavelength (nm)');
+ylabel('Group Index (n_g)');
+title('Group Index vs Wavelength');
+legend('EIM', 'MODE');
+grid on;
+hold off;
 
 # Calculate and display average differences
 avg_diff_n_eff = mean(abs(n_eff_array_EIM - n_eff_array_MODE));
