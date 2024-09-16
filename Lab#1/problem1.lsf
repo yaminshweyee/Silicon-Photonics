@@ -1,0 +1,77 @@
+# Lumerical .lsf script to calculate effective index, group index, and dispersion
+# for a silicon strip waveguide using the built-in MODE solver.
+
+# Define waveguide parameters
+wg_width = 500e-9;  # Width of the waveguide in meters (500 nm)
+wg_thickness = 220e-9;  # Thickness of the waveguide in meters (220 nm)
+
+# Wavelength sweep parameters
+wvl_start = 1500e-9;  # Starting wavelength in meters (1500 nm)
+wvl_stop = 1600e-9;   # Ending wavelength in meters (1600 nm)
+num_points = 100;     # Number of points for the wavelength sweep
+wavelengths = linspace(wvl_start, wvl_stop, num_points);  # Wavelength array
+
+# Create waveguide geometry in 2D or 3D simulation
+addrect;
+set("x span", wg_width);  # Set waveguide width
+set("y span", wg_thickness);  # Set waveguide thickness
+set("z span", 2e-6);  # Set waveguide length for the simulation
+set("material", "Si (Silicon)");  # Set waveguide material to Silicon
+set("override mesh order from material database", 1);
+
+# Define substrate (SiO2) and cladding (air)
+addrect;
+set("x span", wg_width + 2e-6);  # Larger than waveguide width
+set("y span", wg_thickness + 2e-6);  # Larger than waveguide thickness
+set("material", "SiO2 (Silicon Dioxide)");  # Set cladding material to SiO2
+
+# Set up Mode Solver Simulation
+addmode;
+set("wavelength start", wvl_start);
+set("wavelength stop", wvl_stop);
+set("number of points", num_points);
+set("solver type", "FDE");  # Finite-Difference Eigenmode (FDE) solver
+set("x", 0);
+set("y", 0);
+set("z", 0);
+
+# Sweep over wavelengths and extract results
+n_eff_array = zeros(num_points);  # Initialize effective index array
+n_g_array = zeros(num_points);    # Initialize group index array
+
+for (i = 1:num_points) {
+    wavelength = wavelengths(i);
+    setanalysis("wavelength", wavelength);
+    run("compute modes");
+    
+    # Extract the effective index for the fundamental TE mode
+    n_eff = getresult("mode solver", "neff");  # Effective index
+    n_eff_array(i) = n_eff(1);  # Store fundamental mode
+    
+    # Calculate group index by getting the mode data
+    n_g = getresult("mode solver", "ng");  # Group index
+    n_g_array(i) = n_g(1);  # Store fundamental mode group index
+}
+
+# Calculate Dispersion: D(lambda) = -(lambda/c) * d²n_eff/dlambda²
+c = 3e8;  # Speed of light in m/s
+d2n_eff_dlambda2 = gradient(gradient(n_eff_array, wavelengths), wavelengths);
+dispersion_array = -(wavelengths / c) .* d2n_eff_dlambda2;
+
+# Plot Effective Index vs Wavelength
+plot(wavelengths * 1e9, n_eff_array, "Wavelength (nm)", "Effective Index (n_{eff})", "Effective Index vs Wavelength");
+legend("Effective Index (n_{eff})");
+
+# Plot Group Index vs Wavelength
+plot(wavelengths * 1e9, n_g_array, "Wavelength (nm)", "Group Index (n_g)", "Group Index vs Wavelength");
+legend("Group Index (n_g)");
+
+# Plot Dispersion vs Wavelength
+plot(wavelengths * 1e9, dispersion_array, "Wavelength (nm)", "Dispersion (s/m^2)", "Dispersion vs Wavelength");
+legend("Dispersion (D)");
+
+# Display average differences (optional: this would be relevant if comparing multiple methods)
+avg_n_eff = mean(n_eff_array);
+avg_n_g = mean(n_g_array);
+? "Average Effective Index: " + num2str(avg_n_eff);
+? "Average Group Index: " + num2str(avg_n_g);
