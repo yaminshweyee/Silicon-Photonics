@@ -1,0 +1,83 @@
+# Define constants and waveguide parameters
+wavelength = 1550e-9;    # Optical wavelength in meters (1550 nm)
+t = 300e-9;              # Waveguide thickness (300 nm)
+t_sl = 0e-9;            # Slab thickness (0 nm)
+start_width = 100e-9;    # Starting waveguide width (100 nm)
+stop_width = 1200e-9;    # Stopping waveguide width (1200 nm)
+step_width = 5e-9;       # Step for the width (5 nm)
+num_points = round((stop_width - start_width) / step_width) + 1;
+
+# Initialize arrays to store results
+width_array = linspace(start_width, stop_width, num_points);  # Array of widths
+num_modes_TE = zeros(num_points, 1);  # Array to store number of TE modes
+num_modes_TM = zeros(num_points, 1);  # Array to store number of TM modes
+
+# Loop over waveguide widths
+for (i = 1:num_points) {
+    # Set current width of the waveguide
+    current_width = start_width + (i-1) * step_width;
+    
+    # Clear previous geometries and simulations
+    deleteall;  # Remove any previous geometries
+    
+    # Add waveguide geometry
+    addrect;
+    set("name", "waveguide");
+    set("x span", current_width);  # Set waveguide width
+    set("y span", t);              # Set waveguide height
+    set("z span", 2e-6);           # Length of the waveguide for simulation
+    set("material", "Si (Silicon)");  # Silicon material
+    
+    # Add substrate (SiO2)
+    addrect;
+    set("name", "substrate");
+    set("x span", current_width + 2e-6);  # Wider than the waveguide
+    set("y", -t/2 - t_sl - 2e-6);        # Position below waveguide
+    set("y span", 2e-6);                  # Thickness for substrate
+    set("material", "SiO2 (Silicon Dioxide)");  # SiO2 substrate material
+    
+    # Set up the FDE solver
+    addfde;  # Add the FDE solver region
+    set("solver type", "2D X normal");  # Solver type (2D X normal)
+    set("wavelength", wavelength);  # Set the simulation wavelength
+    
+    # Run the FDE solver
+    solvestructures;  # Solve the structure to compute modes
+    
+    # Fetch mode data
+    modes = findmodes;  # Find all available modes
+    
+    # Initialize counters for modes
+    num_TE = 0;
+    num_TM = 0;
+    
+    # Loop through the modes and count TE and TM modes
+    for (m = 1:modes) {
+        mode_type = getdata("FDE::data::mode" + num2str(m), "mode_type");
+        if (strcmp(mode_type, "TE")) {
+            num_TE = num_TE + 1;
+        } else if (strcmp(mode_type, "TM")) {
+            num_TM = num_TM + 1;
+        }
+    }
+    
+    # Store the number of modes
+    num_modes_TE(i) = num_TE;
+    num_modes_TM(i) = num_TM;
+end
+
+# Determine the waveguide width range for single-mode operation
+single_mode_TE_range = width_array(num_modes_TE == 1);
+single_mode_TM_range = width_array(num_modes_TM == 1);
+
+# Output results
+? "Waveguide width range for single TE mode: " + num2str(single_mode_TE_range*1e9) + " nm";
+? "Waveguide width range for single TM mode: " + num2str(single_mode_TM_range*1e9) + " nm";
+
+# Optionally export data to CSV
+filename = "single_mode_width_ranges.csv";
+data = [width_array*1e9, num_modes_TE, num_modes_TM];  # Convert widths to nm for export
+write(filename, data, "Waveguide Width (nm), Number of TE Modes, Number of TM Modes");
+
+# Output final message
+? "Simulation completed. Data exported to " + filename;
