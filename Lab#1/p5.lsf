@@ -1,0 +1,78 @@
+# Define constants and waveguide parameters
+wavelength_start = 1500e-9;  # Starting wavelength in meters
+wavelength_stop = 1600e-9;   # Stopping wavelength in meters
+wavelength = 1550e-9;        # Optical wavelength in meters (1550 nm)
+t = 220e-9;                  # Waveguide height (thickness) in meters
+t_sl = 90e-9;                # Slab thickness in meters
+start_width = 300e-9;        # Starting waveguide width (300 nm)
+stop_width = 1200e-9;        # Stopping waveguide width (1200 nm)
+step_width = 5e-9;           # Step for the width (5 nm)
+num_points = round((stop_width - start_width) / step_width) + 1;
+
+# Initialize arrays to store results
+n_eff_array = zeros(num_points, 1);  # Effective index array
+n_g_array = zeros(num_points, 1);    # Group index array
+width_array = linspace(start_width, stop_width, num_points);  # Array of widths
+
+# Loop over waveguide widths
+for (i = 1:num_points) {
+    # Set current width of the waveguide
+    current_width = start_width + (i-1) * step_width;
+    
+    # Clear previous geometries and simulations
+    deleteall;  # Remove any previous geometries
+    
+    # Add waveguide geometry
+    addrect;
+    set("name", "waveguide");
+    set("x span", current_width);  # Set waveguide width
+    set("y span", t);              # Set waveguide height
+    set("z span", 2e-6);           # Length of the waveguide for simulation
+    set("material", "Si (Silicon)");  # Silicon material
+    
+    # Add substrate (SiO2)
+    addrect;
+    set("name", "substrate");
+    set("x span", current_width + 2e-6);  # Wider than the waveguide
+    set("y", -t/2 - t_sl - 2e-6);        # Position below waveguide
+    set("y span", 2e-6);                  # Thickness for substrate
+    set("material", "SiO2 (Silicon Dioxide)");  # SiO2 substrate material
+    
+    # Set up the FDE solver
+    addfde;  # Add the FDE solver region
+    set("solver type", "2D X normal");  # Solver type (2D X normal)
+    set("wavelength", wavelength);  # Set the simulation wavelength
+    
+    # Run the FDE solver
+    solvestructures;  # Solve the structure to compute modes
+    
+    # Fetch mode data
+    modes = findmodes;  # Find all available modes
+    for (m = 1:modes) {
+        # Extract effective index and group index for the mode
+        neff = abs(getdata("FDE::data::mode" + num2str(m), "neff"));  # Extract effective index
+        ng = abs(getdata("FDE::data::mode" + num2str(m), "ng"));      # Extract group index
+
+        # Store results for fundamental mode (typically mode 1)
+        if (m == 1) {
+            n_eff_array(i) = neff;  # Store effective index
+            n_g_array(i) = ng;      # Store group index
+        end
+    end
+end
+
+# Export data to a file (CSV for MATLAB or plotting)
+filename = "mode_waveguide_results_table2.csv";
+data = [width_array*1e9, n_eff_array, n_g_array];  # Convert widths to nm for export
+write(filename, data, "Waveguide Width (nm), Effective Index (n_{eff}), Group Index (n_g)");
+
+# Plot results in Lumerical directly (if supported)
+if (length(width_array) > 0 && length(n_eff_array) > 0 && length(n_g_array) > 0) {
+    plot(width_array * 1e9, n_eff_array, "Waveguide Width (nm)", "Effective Index (n_{eff})", "Effective Index vs Waveguide Width");
+    plot(width_array * 1e9, n_g_array, "Waveguide Width (nm)", "Group Index (n_g)", "Group Index vs Waveguide Width");
+} else {
+    ? "Data arrays are empty or not correctly populated. Check your simulation results.";
+}
+
+# Output final message
+? "Simulation completed. Data exported to " + filename;
