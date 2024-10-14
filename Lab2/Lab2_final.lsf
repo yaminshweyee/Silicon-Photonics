@@ -17,8 +17,8 @@ right_arm_data(4,:) = [4, 3.05777e-24];
 right_arm_data(5,:) = [5, 1.05454e-23];
 
 # Extract power values (column 2)
-P_left = abs(left_arm_data(:,1));
-P_right = abs(right_arm_data(:,1));
+P_left = abs(left_arm_data(:,2));
+P_right = abs(right_arm_data(:,2));
 
 # Calculate S-parameters: S21 and S31
 S21 = sqrt(P_left);  # Transmission to left arm
@@ -39,3 +39,13 @@ print("Insertion Loss (Left Arm) [dB]: "); print(insertion_loss_left);
 print("Insertion Loss (Right Arm) [dB]: "); print(insertion_loss_right);
 print("Normalized Power Left [%]: "); print(normalized_power_left);
 print("Normalized Power Right [%]: "); print(normalized_power_right);
+
+# Define wavelength range (in nm) for the plot (1500 nm to 1600 nm)
+wavelength = linspace(1500, 1600, 5);  # 5 points for simplicity; use more points for smooth plots
+
+# Plot Transmission vs. Wavelength for S21 and S31
+plot(wavelength, S21, "Wavelength (nm)", "S21 (Left Arm)");
+plot(wavelength, S31, "Wavelength (nm)", "S31 (Right Arm)");
+
+# Export S21 and S31 data to a MATLAB file
+#matlabsave("S_parameters.mat", "S21", S21, "S31", S31);
