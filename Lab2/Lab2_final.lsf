@@ -1,0 +1,41 @@
+# Load data from monitors
+left_arm_data = matrix(5, 2);
+right_arm_data = matrix(5, 2);
+
+# Fill in left arm data
+left_arm_data(1,:) = [1, 7.14982e-24];
+left_arm_data(2,:) = [2, -8.1057e-24];
+left_arm_data(3,:) = [3, 1.77098e-23];
+left_arm_data(4,:) = [4, 3.61627e-24];
+left_arm_data(5,:) = [5, 3.81657e-24];
+
+# Fill in right arm data
+right_arm_data(1,:) = [1, -2.25493e-24];
+right_arm_data(2,:) = [2, -6.43461e-24];
+right_arm_data(3,:) = [3, -1.6278e-23];
+right_arm_data(4,:) = [4, 3.05777e-24];
+right_arm_data(5,:) = [5, 1.05454e-23];
+
+# Extract power values (column 2)
+P_left = abs(left_arm_data(:,1));
+P_right = abs(right_arm_data(:,1));
+
+# Calculate S-parameters: S21 and S31
+S21 = sqrt(P_left);  # Transmission to left arm
+S31 = sqrt(P_right); # Transmission to right arm
+
+# Calculate Insertion Loss (in dB)
+insertion_loss_left = -10 * log10(S21);
+insertion_loss_right = -10 * log10(S31);
+
+# Calculate Normalized Power Transmission (percentage)
+normalized_power_left = S21 / (S21 + S31) * 100;
+normalized_power_right = S31 / (S21 + S31) * 100;
+
+# Display results properly using print
+print("S21 (Left Arm): "); print(S21);
+print("S31 (Right Arm): "); print(S31);
+print("Insertion Loss (Left Arm) [dB]: "); print(insertion_loss_left);
+print("Insertion Loss (Right Arm) [dB]: "); print(insertion_loss_right);
+print("Normalized Power Left [%]: "); print(normalized_power_left);
+print("Normalized Power Right [%]: "); print(normalized_power_right);
