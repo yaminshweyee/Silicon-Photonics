@@ -1,0 +1,43 @@
+Lab2_final;
+S21 (Left Arm): 
+result: 
+2.67391e-12  
+2.84705e-12  
+4.2083e-12  
+1.90165e-12  
+1.9536e-12  
+S31 (Right Arm): 
+result: 
+1.50164e-12  
+2.53665e-12  
+4.0346e-12  
+1.74865e-12  
+3.24737e-12  
+Insertion Loss (Left Arm) [dB]: 
+result: 
+115.729  
+115.456  
+113.759  
+117.209  
+117.092  
+Insertion Loss (Right Arm) [dB]: 
+result: 
+118.234  
+115.957  
+113.942  
+117.573  
+114.885  
+Normalized Power Left [%]: 
+result: 
+64.0373  
+52.8828  
+51.0536  
+52.0957  
+37.5623  
+Normalized Power Right [%]: 
+result: 
+35.9627  
+47.1172  
+48.9464  
+47.9043  
+62.4377 
